@@ -18,9 +18,6 @@ package reference
 
 import (
 	"errors"
-	"fmt"
-	"net/url"
-	"strings"
 
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -31,7 +28,6 @@ import (
 var (
 	// Errors that could be returned by GetReference.
 	ErrNilObject  = errors.New("can't reference a nil object")
-	ErrNoSelfLink = errors.New("selfLink was empty, can't make reference")
 )
 
 // GetReference returns an ObjectReference which refers to the given
@@ -75,26 +71,6 @@ func GetReference(scheme *runtime.Scheme, obj runtime.Object) (*v1.ObjectReferen
 
 	// if the object referenced is actually persisted, we can also get version from meta
 	version := gvk.GroupVersion().String()
-	if len(version) == 0 {
-		selfLink := listMeta.GetSelfLink()
-		if len(selfLink) == 0 {
-			return nil, ErrNoSelfLink
-		}
-		selfLinkUrl, err := url.Parse(selfLink)
-		if err != nil {
-			return nil, err
-		}
-		// example paths: /<prefix>/<version>/*
-		parts := strings.Split(selfLinkUrl.Path, "/")
-		if len(parts) < 4 {
-			return nil, fmt.Errorf("unexpected self link format: '%v'; got version '%v'", selfLink, version)
-		}
-		if parts[1] == "api" {
-			version = parts[2]
-		} else {
-			version = parts[2] + "/" + parts[3]
-		}
-	}
 
 	// only has list metadata
 	if objectMeta == nil {
